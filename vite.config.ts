@@ -5,6 +5,8 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
+      // GitHub Pages serves the project from /pomodoro/, so asset URLs need that base path.
+      base: '/pomodoro/',
       server: {
         port: 3000,
         host: '0.0.0.0',
