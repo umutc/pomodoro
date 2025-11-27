@@ -1,0 +1,5 @@
+{
+  "name": "Pomodoro Timer",
+  "description": "A simple Pomodoro timer to help you manage work and break sessions for improved focus and productivity. Uses the Pomodoro Technique principles.",
+  "requestFramePermissions": []
+}
