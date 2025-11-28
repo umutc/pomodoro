@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import TimerDisplay from './components/TimerDisplay';
 import Controls from './components/Controls';
 import SessionInfo from './components/SessionInfo';
@@ -16,12 +16,44 @@ const App: React.FC = () => {
   const [timeLeftInSeconds, setTimeLeftInSeconds] = useState<number>(WORK_DURATION_SECONDS);
   const [timerIsActive, setTimerIsActive] = useState<boolean>(false);
   const [workSessionsCompletedInCycle, setWorkSessionsCompletedInCycle] = useState<number>(0);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
-  const playNotificationSound = () => {
-    // Placeholder for sound notification.
-    // Actual audio implementation can be complex due to browser policies.
-    console.log(`Session ended: ${currentSession}`);
-  };
+  const playNotificationSound = useCallback(() => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContextClass();
+      }
+
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+
+      const now = ctx.currentTime;
+
+      // Quick two-beep envelope for clarity without an external audio file.
+      const makeBeep = (startOffset: number, frequency: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(frequency, now + startOffset);
+
+        gain.gain.setValueAtTime(0.0001, now + startOffset);
+        gain.gain.exponentialRampToValueAtTime(0.25, now + startOffset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + startOffset + 0.45);
+
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now + startOffset);
+        osc.stop(now + startOffset + 0.5);
+      };
+
+      makeBeep(0, 880);
+      makeBeep(0.55, 660);
+    } catch (err) {
+      console.warn('Notification sound failed', err);
+    }
+  }, []);
 
   const handleSessionEnd = useCallback(() => {
     setTimerIsActive(false);
@@ -42,7 +74,15 @@ const App: React.FC = () => {
       setCurrentSession(SessionType.WORK);
       setTimeLeftInSeconds(WORK_DURATION_SECONDS);
     }
-  }, [currentSession, workSessionsCompletedInCycle]);
+  }, [currentSession, workSessionsCompletedInCycle, playNotificationSound]);
+
+  useEffect(() => {
+    return () => {
+      if (audioCtxRef.current?.state !== 'closed') {
+        audioCtxRef.current?.close();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (timerIsActive && timeLeftInSeconds === 0) {

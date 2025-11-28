@@ -6,7 +6,7 @@
 
 Live site: https://umutc.github.io/pomodoro/
 
-React + Vite Pomodoro timer with GitHub Pages deployment.
+React + Vite Pomodoro timer with GitHub Pages deployment, offline PWA support, and end-of-session chime.
 
 ## Quick Start
 
@@ -27,3 +27,13 @@ Deployment is automated via GitHub Actions (`.github/workflows/deploy.yml`):
 - Manual trigger: `gh workflow run deploy.yml` or rerun the latest run: `gh run rerun --latest`.
 
 The published site lives at `https://umutc.github.io/pomodoro/`.
+
+## PWA & Auto‑Update
+
+- Installable: open the site and “Add to Home Screen”/“Add to Dock” to install the PWA.
+- Offline: navigation falls back to a cached offline page when there’s no network.
+- Auto-update: the service worker skips waiting and reloads clients when a new version ships, so docked installs stay fresh after each deploy.
+
+## Sound
+
+The timer plays a short two-tone beep at the end of each session using the Web Audio API (no external audio files).
