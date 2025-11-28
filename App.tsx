@@ -18,10 +18,10 @@ const App: React.FC = () => {
   const [workSessionsCompletedInCycle, setWorkSessionsCompletedInCycle] = useState<number>(0);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  const playNotificationSound = useCallback(() => {
+  const ensureAudioContext = useCallback(() => {
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
+      if (!AudioContextClass) return null;
 
       if (!audioCtxRef.current) {
         audioCtxRef.current = new AudioContextClass();
@@ -29,6 +29,17 @@ const App: React.FC = () => {
 
       const ctx = audioCtxRef.current;
       if (ctx.state === 'suspended') ctx.resume();
+      return ctx;
+    } catch (err) {
+      console.warn('Audio context unavailable', err);
+      return null;
+    }
+  }, []);
+
+  const playNotificationSound = useCallback(() => {
+    try {
+      const ctx = ensureAudioContext();
+      if (!ctx) return;
 
       const now = ctx.currentTime;
 
@@ -53,7 +64,24 @@ const App: React.FC = () => {
     } catch (err) {
       console.warn('Notification sound failed', err);
     }
-  }, []);
+  }, [ensureAudioContext]);
+
+  const playClickSound = useCallback(() => {
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1400, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.13);
+  }, [ensureAudioContext]);
 
   const handleSessionEnd = useCallback(() => {
     setTimerIsActive(false);
@@ -110,10 +138,12 @@ const App: React.FC = () => {
 
 
   const handleStartPause = () => {
+    playClickSound();
     setTimerIsActive(prev => !prev);
   };
 
   const handleReset = () => {
+    playClickSound();
     setTimerIsActive(false);
     switch (currentSession) {
       case SessionType.WORK:
